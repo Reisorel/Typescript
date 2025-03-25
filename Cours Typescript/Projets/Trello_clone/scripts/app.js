@@ -18,6 +18,7 @@ function addContainerListeners(currentContainer) {
     AddItemBtnListeners(currentAddItemBtn);
     closingFormBtnListeners(currentCloseFormBtn);
     addFormSubmitListener(currentForm);
+    addDDlisteners(currentContainer);
 }
 itemsContainer.forEach((container) => {
     addContainerListeners(container);
@@ -38,6 +39,12 @@ function closingFormBtnListeners(btn) {
 }
 function addFormSubmitListener(form) {
     form.addEventListener("submit", createNewItem);
+}
+function addDDlisteners(element) {
+    element.addEventListener("dragstart", handleDragStart);
+    element.addEventListener("dragover", handleDragOver);
+    element.addEventListener("drop", handleDrop);
+    element.addEventListener("dragend", handleDragEnd);
 }
 // Fonction handleContainerDelection prend en paramètre un événement MouseEvent
 // Permet de supprimer un container
@@ -97,6 +104,7 @@ function createNewItem(e) {
     const item = actualUl.lastElementChild;
     const liBtn = item.querySelector("button");
     handleItemDeletion(liBtn);
+    addDDlisteners(item);
     actualTextInput.value = "";
 }
 function handleItemDeletion(btn) {
@@ -105,17 +113,102 @@ function handleItemDeletion(btn) {
         elToRemove.remove();
     });
 }
+// Drag & drop
+let dragSrcEl;
+function handleDragStart(e) {
+    var _a;
+    e.stopPropagation();
+    if (actualContainer)
+        toggleForm(actualBtn, actualForm, false);
+    dragSrcEl = this;
+    (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData("text/html", this.innerHTML);
+}
+function handleDragOver(e) {
+    e.preventDefault();
+}
+function handleDrop(e) {
+    var _a;
+    e.stopPropagation();
+    const receptionEl = this;
+    if (dragSrcEl.nodeName === "LI" &&
+        receptionEl.classList.contains("items-container")) {
+        receptionEl.querySelector("ul").appendChild(dragSrcEl);
+        addDDlisteners(dragSrcEl);
+        handleItemDeletion(dragSrcEl.querySelector("button"));
+    }
+    if (dragSrcEl !== this && this.classList[0] === dragSrcEl.classList[0]) {
+        dragSrcEl.innerHTML = this.innerHTML;
+        this.innerHTML = (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData("text/html");
+        if (this.classList.contains("items-container")) {
+            addContainerListeners(this);
+            this.querySelectorAll("li").forEach((li) => {
+                handleItemDeletion(li.querySelector("button"));
+                addDDlisteners(li);
+            });
+        }
+        else {
+            addDDlisteners(this);
+            handleItemDeletion(this.querySelector("button"));
+        }
+    }
+}
+function handleDragEnd(e) {
+    e.stopPropagation();
+    if (this.classList.contains("items-container")) {
+        addContainerListeners(this);
+        this.querySelectorAll("li").forEach((li) => {
+            handleItemDeletion(li.querySelector("button"));
+            addDDlisteners(li);
+        });
+    }
+    else {
+        addDDlisteners(this);
+    }
+}
 // add new Container
-const addContainerBtn = document.querySelector('.add-container-btn');
-const addContainerForm = document.querySelector('.add-new-container form');
-const addContainerFormInput = document.querySelector('.add-new-container input');
-const validationNewContainer = document.querySelector('.add-new-container .validation-msg');
-const addContainerCloseBtn = document.querySelector('.close-add-list');
-const addNewContainerBtn = document.querySelector('.add-new-container');
-const containersList = document.querySelector('.main-content');
-addContainerBtn.addEventListener('click', () => {
+const addContainerBtn = document.querySelector(".add-container-btn");
+const addContainerForm = document.querySelector(".add-new-container form");
+const addContainerFormInput = document.querySelector(".add-new-container input");
+const validationNewContainer = document.querySelector(".add-new-container .validation-msg");
+const addContainerCloseBtn = document.querySelector(".close-add-list");
+const addNewContainerBtn = document.querySelector(".add-new-container");
+const containersList = document.querySelector(".main-content");
+addContainerBtn.addEventListener("click", () => {
     toggleForm(addContainerBtn, addContainerForm, true);
 });
-addContainerCloseBtn.addEventListener('click', () => {
+addContainerCloseBtn.addEventListener("click", () => {
     toggleForm(addContainerBtn, addContainerForm, false);
 });
+addContainerForm.addEventListener("submit", createNewcontainer);
+function createNewcontainer(e) {
+    e.preventDefault();
+    if (addContainerFormInput.value.length === 0) {
+        validationNewContainer.textContent = "Must be at least 1 character long";
+        return;
+    }
+    else {
+        validationNewContainer.textContent = "";
+    }
+    const itemsContainer = document.querySelector(".items-container");
+    const newContainer = itemsContainer.cloneNode();
+    const newContainerContent = `
+        <div class="top-container">
+          <h2>${addContainerFormInput.value}</h2>
+          <button class="delete-container-btn">X</button>
+        </div>
+        <ul></ul>
+        <button class="add-item-btn">Add an item</button>
+        <form autocomplete="off">
+          <div class="top-form-container">
+            <label for="item">Add a new item</label>
+            <button type="button" class="close-form-btn">X</button>
+          </div>
+          <input type="text" id="item" />
+          <span class="validation-msg"></span>
+          <button type="submit">Submit</button>
+        </form>`;
+    newContainer.innerHTML = newContainerContent;
+    containersList.insertBefore(newContainer, addNewContainerBtn);
+    addContainerFormInput.value = "";
+    addContainerListeners(newContainer);
+}
